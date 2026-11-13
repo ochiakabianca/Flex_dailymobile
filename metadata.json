@@ -1,0 +1,6 @@
+{
+  "name": "Flex Daily",
+  "description": "A daily fitness, workout, and wellness tracker app with cloud sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

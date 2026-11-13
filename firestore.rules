@@ -1,0 +1,213 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Shared Security Primitives ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidDateKey(dateKey) {
+      return dateKey is string && dateKey.size() == 10 && dateKey.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
+
+    // --- Entity Validators (Anti-Update-Gap Blueprints) ---
+
+    function isValidUserProfile(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId == request.auth.uid &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             data.calorieGoal is int && data.calorieGoal >= 100 && data.calorieGoal <= 10000 &&
+             data.activeMinutesGoal is int && data.activeMinutesGoal >= 5 && data.activeMinutesGoal <= 600 &&
+             data.waterGoalMl is int && data.waterGoalMl >= 250 && data.waterGoalMl <= 10000 &&
+             data.stepsGoal is int && data.stepsGoal >= 500 && data.stepsGoal <= 100000 &&
+             data.weeklyWorkoutsGoal is int && data.weeklyWorkoutsGoal >= 1 && data.weeklyWorkoutsGoal <= 14 &&
+             data.preferredUnit is string && data.preferredUnit in ['kg', 'lbs'];
+    }
+
+    function isValidDailyLog(data, userId, docDateKey) {
+      return data.userId is string && data.userId == userId && data.userId == request.auth.uid &&
+             isValidDateKey(data.dateKey) && data.dateKey == docDateKey &&
+             data.waterMl is int && data.waterMl >= 0 && data.waterMl <= 20000 &&
+             data.steps is int && data.steps >= 0 && data.steps <= 200000 &&
+             data.habitsCompleted is list && data.habitsCompleted.size() <= 10 &&
+             (data.habitsCompleted.size() == 0 || (data.habitsCompleted[0] is string && data.habitsCompleted[0].size() <= 50)) &&
+             data.mood is string && data.mood in ['', 'energized', 'good', 'steady', 'tired', 'sore'];
+    }
+
+    function isValidWorkoutEntry(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId == request.auth.uid &&
+             isValidDateKey(data.dateKey) &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+             data.category is string && data.category in ['strength', 'cardio', 'hiit', 'yoga', 'sports', 'other'] &&
+             data.durationMinutes is int && data.durationMinutes >= 1 && data.durationMinutes <= 600 &&
+             data.caloriesBurned is int && data.caloriesBurned >= 0 && data.caloriesBurned <= 5000 &&
+             data.intensity is string && data.intensity in ['light', 'moderate', 'vigorous'] &&
+             data.distanceKm is number && data.distanceKm >= 0 && data.distanceKm <= 500 &&
+             data.setsCompleted is int && data.setsCompleted >= 0 && data.setsCompleted <= 200 &&
+             data.notes is string && data.notes.size() <= 500;
+    }
+
+    function isValidWeightEntry(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId == request.auth.uid &&
+             isValidDateKey(data.dateKey) &&
+             data.weightKg is number && data.weightKg >= 20 && data.weightKg <= 400 &&
+             data.note is string && data.note.size() <= 200;
+    }
+
+    // --- Collection Rules ---
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'calorieGoal', 'activeMinutesGoal',
+                         'waterGoalMl', 'stepsGoal', 'weeklyWorkoutsGoal', 'preferredUnit',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'calorieGoal', 'activeMinutesGoal',
+                         'waterGoalMl', 'stepsGoal', 'weeklyWorkoutsGoal', 'preferredUnit',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       isValidUserProfile(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'calorieGoal', 'activeMinutesGoal',
+                         'waterGoalMl', 'stepsGoal', 'weeklyWorkoutsGoal',
+                         'preferredUnit', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /dailyLogs/{dateKey} {
+        allow get: if isOwner(userId) && isValidDateKey(dateKey);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidDateKey(dateKey) &&
+                         incoming().keys().hasAll([
+                           'userId', 'dateKey', 'waterMl', 'steps',
+                           'habitsCompleted', 'mood', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'dateKey', 'waterMl', 'steps',
+                           'habitsCompleted', 'mood', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidDailyLog(incoming(), userId, dateKey);
+
+        allow update: if isOwner(userId) &&
+                         isValidDateKey(dateKey) &&
+                         isValidDailyLog(incoming(), userId, dateKey) &&
+                         incoming().userId == existing().userId &&
+                         incoming().dateKey == existing().dateKey &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'waterMl', 'steps', 'habitsCompleted', 'mood', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidDateKey(dateKey);
+      }
+
+      match /workouts/{workoutId} {
+        allow get: if isOwner(userId) && isValidId(workoutId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(workoutId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'dateKey', 'title', 'category',
+                           'durationMinutes', 'caloriesBurned', 'intensity',
+                           'distanceKm', 'setsCompleted', 'notes', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'dateKey', 'title', 'category',
+                           'durationMinutes', 'caloriesBurned', 'intensity',
+                           'distanceKm', 'setsCompleted', 'notes', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidWorkoutEntry(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(workoutId) &&
+                         isValidWorkoutEntry(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'dateKey', 'title', 'category', 'durationMinutes',
+                           'caloriesBurned', 'intensity', 'distanceKm',
+                           'setsCompleted', 'notes', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(workoutId);
+      }
+
+      match /weightLogs/{entryId} {
+        allow get: if isOwner(userId) && isValidId(entryId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(entryId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'dateKey', 'weightKg', 'note', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'dateKey', 'weightKg', 'note', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidWeightEntry(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(entryId) &&
+                         isValidWeightEntry(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'dateKey', 'weightKg', 'note', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(entryId);
+      }
+    }
+  }
+}

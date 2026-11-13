@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Flex Daily</string>
+    <string name="tagline">Train with intent. Track every rep, drop, and mile.</string>
+    <string name="sign_in_with_google">Continue with Google</string>
+    <string name="sign_out">Sign out</string>
+    <string name="nav_today">Today</string>
+    <string name="nav_workouts">Workouts</string>
+    <string name="nav_progress">Progress</string>
+    <string name="nav_profile">Goals</string>
+    <string name="log_workout">Log Workout</string>
+    <string name="start_timer">Start Live Timer</string>
+    <string name="empty_workouts_title">No sessions logged yet</string>
+    <string name="empty_workouts_subtitle">Start a live timer or tap Log Workout to record your first training session.</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="retry">Retry</string>
+</resources>

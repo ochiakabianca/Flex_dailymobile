@@ -1,0 +1,250 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User fitness targets and preferences stored per authenticated user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated user UID matching the document ID."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name (1 to 80 characters)."
+        },
+        "calorieGoal": {
+          "type": "integer",
+          "description": "Daily active calorie burn goal in kcal (100 to 10000)."
+        },
+        "activeMinutesGoal": {
+          "type": "integer",
+          "description": "Daily active exercise minutes goal (5 to 600)."
+        },
+        "waterGoalMl": {
+          "type": "integer",
+          "description": "Daily hydration target in milliliters (250 to 10000)."
+        },
+        "stepsGoal": {
+          "type": "integer",
+          "description": "Daily step count target (500 to 100000)."
+        },
+        "weeklyWorkoutsGoal": {
+          "type": "integer",
+          "description": "Target workout sessions per week (1 to 14)."
+        },
+        "preferredUnit": {
+          "type": "string",
+          "enum": ["kg", "lbs"],
+          "description": "Preferred body weight display unit."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server-assigned creation timestamp via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server-assigned last update timestamp via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "calorieGoal",
+        "activeMinutesGoal",
+        "waterGoalMl",
+        "stepsGoal",
+        "weeklyWorkoutsGoal",
+        "preferredUnit",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DailyLog": {
+      "title": "DailyLog",
+      "description": "Daily hydration, step count, habits, and readiness mood keyed by YYYY-MM-DD.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated owner UID."
+        },
+        "dateKey": {
+          "type": "string",
+          "description": "ISO date key YYYY-MM-DD matching the document ID."
+        },
+        "waterMl": {
+          "type": "integer",
+          "description": "Total water consumed on this date in milliliters (0 to 20000)."
+        },
+        "steps": {
+          "type": "integer",
+          "description": "Steps logged on this date (0 to 200000)."
+        },
+        "habitsCompleted": {
+          "type": "array",
+          "description": "Completed daily wellness habit IDs (up to 10 items)."
+        },
+        "mood": {
+          "type": "string",
+          "enum": ["", "energized", "good", "steady", "tired", "sore"],
+          "description": "Daily energy or recovery check-in state."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server-assigned creation timestamp via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server-assigned update timestamp via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "dateKey",
+        "waterMl",
+        "steps",
+        "habitsCompleted",
+        "mood",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkoutEntry": {
+      "title": "WorkoutEntry",
+      "description": "Individual workout session logged by the user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated owner UID."
+        },
+        "dateKey": {
+          "type": "string",
+          "description": "ISO date key YYYY-MM-DD when the workout occurred."
+        },
+        "title": {
+          "type": "string",
+          "description": "Workout session title (1 to 100 characters)."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["strength", "cardio", "hiit", "yoga", "sports", "other"],
+          "description": "Workout discipline category."
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "description": "Session duration in minutes (1 to 600)."
+        },
+        "caloriesBurned": {
+          "type": "integer",
+          "description": "Estimated or measured calories burned (0 to 5000)."
+        },
+        "intensity": {
+          "type": "string",
+          "enum": ["light", "moderate", "vigorous"],
+          "description": "Perceived effort intensity level."
+        },
+        "distanceKm": {
+          "type": "number",
+          "description": "Distance covered in kilometers (0 to 500)."
+        },
+        "setsCompleted": {
+          "type": "integer",
+          "description": "Total sets completed for resistance workouts (0 to 200)."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional training notes (0 to 500 characters)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server-assigned creation timestamp via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server-assigned update timestamp via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "dateKey",
+        "title",
+        "category",
+        "durationMinutes",
+        "caloriesBurned",
+        "intensity",
+        "distanceKm",
+        "setsCompleted",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WeightEntry": {
+      "title": "WeightEntry",
+      "description": "Body weight measurement log entry.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated owner UID."
+        },
+        "dateKey": {
+          "type": "string",
+          "description": "ISO date key YYYY-MM-DD of measurement."
+        },
+        "weightKg": {
+          "type": "number",
+          "description": "Body weight stored in kilograms (20.0 to 400.0)."
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional note (0 to 200 characters)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server-assigned creation timestamp via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server-assigned update timestamp via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "dateKey",
+        "weightKg",
+        "note",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Authenticated user's profile and daily fitness targets."
+    },
+    "/users/{userId}/dailyLogs/{dateKey}": {
+      "schema": { "$ref": "#/entities/DailyLog" },
+      "description": "Per-day hydration, step count, habits, and readiness check-in."
+    },
+    "/users/{userId}/workouts/{workoutId}": {
+      "schema": { "$ref": "#/entities/WorkoutEntry" },
+      "description": "User's logged workout sessions."
+    },
+    "/users/{userId}/weightLogs/{entryId}": {
+      "schema": { "$ref": "#/entities/WeightEntry" },
+      "description": "User's body weight history logs."
+    }
+  }
+}
